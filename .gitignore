@@ -1,7 +1,5 @@
-api/.idea/
-*.iml
-target/
-.idea/
-e.log
-e.log.1
-config.dev.properties
+/.classpath
+/.project
+/.settings/
+/.gitignore
+/target/

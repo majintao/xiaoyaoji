@@ -23,7 +23,7 @@
         <div class="ta-c logo"><a href="${ctx}/"><img src="${assets}/img/logo/full.png"></a></div>
         <div class="item">
             <input type="text" initial="off" name="email" v-model="email" id="email" tabindex="1"
-                   maxlength="45" v-validate="'required|email'" class="text" placeholder="邮箱"/>
+                   maxlength="45" v-validate="'required'" class="text" placeholder="用户名"/>
             <p v-cloak class="tip">{{ errors.first('email') }}</p>
         </div>
         <div class="item">

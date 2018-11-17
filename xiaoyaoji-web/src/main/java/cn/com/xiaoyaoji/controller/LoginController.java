@@ -1,5 +1,20 @@
 package cn.com.xiaoyaoji.controller;
 
+import java.io.IOException;
+import java.util.Date;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
+
 import cn.com.xiaoyaoji.core.annotations.Ignore;
 import cn.com.xiaoyaoji.core.common.Constants;
 import cn.com.xiaoyaoji.core.common.Result;
@@ -12,16 +27,7 @@ import cn.com.xiaoyaoji.core.util.ConfigUtils;
 import cn.com.xiaoyaoji.data.bean.User;
 import cn.com.xiaoyaoji.service.ServiceFactory;
 import cn.com.xiaoyaoji.util.CacheUtils;
-import cn.com.xiaoyaoji.utils.PasswordUtils;
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
-import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.IOException;
+import cn.com.xiaoyaoji.utils.LDAPAuthentication;
 
 /**
  * @author zhoujingjie
@@ -45,15 +51,39 @@ public class LoginController {
     public Object login(@RequestParam String email, @RequestParam String password, HttpServletResponse response) {
         AssertUtils.notNull(email, "用户名为空");
         AssertUtils.notNull(password, "密码为空");
-        password = PasswordUtils.password(password);
-        User user = ServiceFactory.instance().login(email, password);
-        AssertUtils.notNull(user, "用户名或密码错误");
-        if (user.getStatus().equals(User.Status.INVALID)) {
-            return new Result(Result.ERROR, "invalid status");
+//        User user = ServiceFactory.instance().login(email, password);
+//        AssertUtils.notNull(user, "用户名或密码错误");
+//        if (user.getStatus().equals(User.Status.INVALID)) {
+//            return new Result(Result.ERROR, "invalid status");
+//        }
+        if(new LDAPAuthentication().authenricate(email, password)) {
+        	
+        	//不存在，则创建账号(方便其他数据同步)
+        	if(!ServiceFactory.instance().checkEmailExists(email)) {
+        		cn.com.xiaoyaoji.service.domain.User newUser = new cn.com.xiaoyaoji.service.domain.User();
+            	newUser.setPassword("123456");
+            	newUser.setType(User.Type.USER);
+            	newUser.setCreatetime(new Date());
+            	newUser.setId(email);
+            	newUser.setEmail(email);
+            	newUser.setNickname(email);
+            	newUser.setAvatar("/assets/img/defaultlogo.jpg");
+            	newUser.setStatus(User.Status.VALID);
+                int rs = ServiceFactory.instance().create(newUser.toUser());
+        	}
+        	
+        	String token = CacheUtils.token();
+            User user = new User();
+            user.setId(email);
+            user.setNickname(email);
+            user.setType(User.Type.USER);
+            user.setAvatar("/assets/img/defaultlogo.jpg");
+            user.setStatus(User.Status.VALID);
+            response.addCookie(setCookie(token,user));
+            return true;
+        } else {
+          return new Result(Result.ERROR, "invalid status");
         }
-        String token = CacheUtils.token();
-        response.addCookie(setCookie(token,user));
-        return true;
     }
 
     /**
